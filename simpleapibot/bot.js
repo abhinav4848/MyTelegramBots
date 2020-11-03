@@ -51,6 +51,7 @@ bot.command('cat', async (ctx) => {
     let input = ctx.message.text;
     let inputArray = input.split(" ");
 
+
     if (inputArray.length == 1) {
         try {
             let res = await axios.get('http://aws.random.cat/meow')
@@ -61,7 +62,12 @@ bot.command('cat', async (ctx) => {
     } else {
         inputArray.shift();
         input = inputArray.join(" ");
-        ctx.replyWithPhoto(`https://cataas.com/cat/says/${input}?size=50&color=yellow`);
+
+        // randomness added to force telegram to get a new image each time instead of showing the old cached image
+        // useful when input is the same as before
+        let r = Math.random().toString(36).substring(2);
+        ctx.replyWithPhoto(`https://cataas.com/cat/says/${input}?size=50&color=yellow&r=${r}`);
+
     }
 })
 
