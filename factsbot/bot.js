@@ -64,6 +64,7 @@ bot.command('quote', ctx => {
             quote = dataStore.filter(item => {
                 return (item.row == number && item.col == '5');
             })[0];
+            console.log("Chosen Quote #" + number);
 
         } else {
 
@@ -102,7 +103,8 @@ bot.command('update', async ctx => {
  */
 async function getData() {
     try {
-        let res = await axios('https://spreadsheets.google.com/feeds/cells/1pkWhpR8hd3MHY85d_WzPPjeDwmIJnIEW_DRQOIaSmts/1/public/full?alt=json');
+        // https://spreadsheets.google.com/feeds/cells/1pkWhpR8hd3MHY85d_WzPPjeDwmIJnIEW_DRQOIaSmts/1/public/full?alt=json
+        let res = await axios(process.env.SHEET);
         let data = res.data.feed.entry;
 
         // Done to empty the array of the previous data which it was populated with after the first getData() operation
