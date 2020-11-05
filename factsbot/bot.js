@@ -24,23 +24,55 @@ bot.command(['start', 'help'], ctx => {
     let welcome = `
 /start or /help - Get welcome message
 /quote: Get a random quote
+/quote \`<number>\`: Choose a number between 1 & ${maxRows}
 /update: Fetch quotes list again
 
 Currently there are ${maxRows} quotes available`;
 
-    ctx.reply(welcome);
+    bot.telegram.sendMessage(ctx.from.id, welcome, {
+        parse_mode: "markdown"
+    })
 })
 
 /**
- * Return a random quote from 1 to maxRow
+ * /quote: Return a random quote from 1 to maxRow
+ * /quote 42: return that number quote
  */
 bot.command('quote', ctx => {
-    let k = Math.floor(Math.random() * maxRows) + 1;
-    console.log("Quote #" + k);
+    let input = ctx.message.text;
+    let inputArray = input.split(" ");
+    let quote;
 
-    let quote = dataStore.filter(item => {
-        return (item.row == k && item.col == '5');
-    })[0];
+    // if array has only one param, return random quote, 
+    // else see if the [1] place is a valid number and return the specific quote
+    // otherwise inform about valid rules and exit function
+    if (inputArray.length == 1) {
+
+        let k = Math.floor(Math.random() * maxRows) + 1;
+        console.log("Quote #" + k);
+
+        quote = dataStore.filter(item => {
+            return (item.row == k && item.col == '5');
+        })[0];
+
+    } else {
+
+        // Convert the inputArray[1] to an integer for eval
+        let number = parseInt(inputArray[1]);
+
+        if (!isNaN(number) && number >= 1 && number <= maxRows) {
+            quote = dataStore.filter(item => {
+                return (item.row == number && item.col == '5');
+            })[0];
+
+        } else {
+
+            ctx.reply(`Choose number between 1 and ${maxRows} only.`)
+            // remember to terminate the function otherwise the messages get thrown after this and cause bugs
+            return;
+
+        }
+    }
 
     let message = `
 \`Quote #${quote.row}:\`
