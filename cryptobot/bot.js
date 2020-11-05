@@ -6,7 +6,7 @@ const bot = new Telegraf(process.env.TOKEN);
 const axios = require('axios');
 
 //apikey for cryptocompare
-const apiKey = process.env.APIKEY;
+const apiKey = process.env.CRYPTOCOMPAREAPI;
 
 // Initial start command
 bot.command('start', ctx => {
