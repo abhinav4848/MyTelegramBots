@@ -20,11 +20,12 @@ getData();
 /**
  * Intro Messages
  */
+// /full: Get all quotes as message
 bot.command(['start', 'help'], ctx => {
     let welcome = `
 /start or /help - Get welcome message
 /quote: Get a random quote
-/quote \`<number>\`: Choose a number between 1 & ${maxRows}
+\`/quote <number>\`: Choose a number between 1 & ${maxRows}
 /update: Fetch quotes list again
 
 Currently there are ${maxRows} quotes available`;
@@ -76,13 +77,34 @@ bot.command('quote', ctx => {
     }
 
     let message = `
-\`Quote #${quote.row}:\`
+\`/quote ${quote.row}\`:
 ${quote.val}
 `;
 
     bot.telegram.sendMessage(ctx.from.id, message, {
         parse_mode: "markdown"
     })
+})
+
+// Send all quotes at 1 second intervals
+bot.command('full', ctx => {
+    // remove crap stuff from start of array
+    // start from index 0 and remove 3 objects in the array
+    dataStore.splice(0, 3);
+
+    // https://travishorn.com/delaying-foreach-iterations-2ebd4b29ad30
+    dataStore.forEach((quote, i) => {
+        setTimeout(() => {
+            let message = `
+\`Quote #${quote.row}:\`
+${quote.val}
+`;
+
+            bot.telegram.sendMessage(ctx.from.id, message, {
+                parse_mode: "markdown"
+            })
+        }, i * 1000);
+    });
 })
 
 /**
@@ -103,6 +125,7 @@ bot.command('update', async ctx => {
  */
 async function getData() {
     try {
+        // https://docs.google.com/spreadsheets/d/1pkWhpR8hd3MHY85d_WzPPjeDwmIJnIEW_DRQOIaSmts/edit?usp=sharing
         // https://spreadsheets.google.com/feeds/cells/1pkWhpR8hd3MHY85d_WzPPjeDwmIJnIEW_DRQOIaSmts/1/public/full?alt=json
         let res = await axios(process.env.SHEET);
         let data = res.data.feed.entry;
