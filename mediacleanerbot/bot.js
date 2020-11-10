@@ -18,12 +18,35 @@ bot.use((ctx, next) => {
 })
 
 bot.on('message', ctx => {
-    console.log(ctx.updateSubTypes)
+    console.log(ctx.from)
+
+    // console.log(ctx.updateSubTypes)
+    // Gifs: [ 'animation', 'document', 'forward' ]
+    // Others: [ 'video', 'forward' ]
     if (ctx.updateSubTypes[1] == 'forward' || ctx.updateSubTypes[2] == 'forward') {
-        let link = "https://t.me/c/" + ctx.message.forward_from_chat.id.toString().substring(4) + "/" + ctx.message.forward_from_message_id;
+
+        // Get the right link to put in media caption
+        let link;
+
+        try {
+            // for normal group links
+            link = `https://t.me/c/${ctx.message.forward_from_chat.id.toString().substring(4)}/${ctx.message.forward_from_message_id}`;
+        } catch {
+            try {
+                // for bot messages you forwarded from a private chat
+                link = `Bot with Name: ${ctx.message.forward_from.first_name} (@${ctx.message.forward_from.username})`;
+            } catch {
+                // Sometimes, "forward_from_chat" or "forward_from" doesn't even exist. Eg: when account is hidden by user
+                link = `No original address specified. Sender was @${ctx.message.forward_sender_name}`;
+            }
+        }
 
         if (ctx.updateSubTypes[0] == 'photo') {
-            bot.telegram.sendPhoto(ctx.chat.id, ctx.message.photo[2].file_id, {
+            // Get the last array index which is always the highest file size.
+            // Mostly, it's [2], but sometimes it's [1]
+            let file_id = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+
+            bot.telegram.sendPhoto(ctx.chat.id, file_id, {
                 caption: 'Sent from ' + link
             });
         } else if (ctx.updateSubTypes[0] == 'video') {
@@ -34,6 +57,13 @@ bot.on('message', ctx => {
             bot.telegram.sendAnimation(ctx.chat.id, ctx.message.animation.file_id, {
                 caption: 'Sent from ' + link
             });
+        } else {
+            bot.telegram.sendMessage(ctx.chat.id, "Not a Pic/Vid/Gif",
+                {
+                    reply_to_message_id: ctx.message.message_id
+                });
+            // By returning, we terminate the function and prevent further execution of code inside it
+            return;
         }
 
         // delete the original message the user sent
