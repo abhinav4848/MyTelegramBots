@@ -3,22 +3,32 @@ const Telegraf = require('telegraf');
 
 const bot = new Telegraf(process.env.TOKEN);
 
-// Record a log as to who said what
+// Record a log as to who said/sent what
 bot.use((ctx, next) => {
-    // console.log(ctx.from);
-    let details = `${ctx.from.first_name} (Username: ${ctx.from.username}, Id: ${ctx.from.id}) `;
+    let details = `${ctx.from.first_name} (@${ctx.from.username})`;
 
     if (ctx.updateSubTypes[0] == "text") {
-        bot.telegram.sendMessage(-491960901, details + "said: " + ctx.message.text);
+        // General message if text
+        bot.telegram.sendMessage(process.env.GROUP_ID, `${details} said: ${ctx.message.text}`);
     } else {
-        bot.telegram.sendMessage(-491960901, details + "sent: " + ctx.updateSubTypes[0]);
+        try {
+            // Send the msg source as an html formatted link
+            let link = `https://t.me/c/${ctx.message.forward_from_chat.id.toString().substring(4)}/${ctx.message.forward_from_message_id}`;
+            let message = `${details} sent <a href="${link}">${ctx.updateSubTypes[0]}</a>`;
+
+            bot.telegram.sendMessage(process.env.GROUP_ID, message, {
+                parse_mode: "html"
+            })
+        } catch {
+            bot.telegram.sendMessage(process.env.GROUP_ID, `${details} sent: ${ctx.updateSubTypes[0]}`);
+        }
     }
 
     next();
 })
 
 bot.on('message', ctx => {
-    console.log(ctx.from)
+    // console.log(ctx.message)
 
     // console.log(ctx.updateSubTypes)
     // Gifs: [ 'animation', 'document', 'forward' ]
@@ -33,14 +43,15 @@ bot.on('message', ctx => {
             link = `https://t.me/c/${ctx.message.forward_from_chat.id.toString().substring(4)}/${ctx.message.forward_from_message_id}`;
         } catch {
             try {
-                // for bot messages you forwarded from a private chat
-                link = `Bot with Name: ${ctx.message.forward_from.first_name} (@${ctx.message.forward_from.username})`;
+                // for messages forwarded from a private chat
+                link = `User/Bot with Name: ${ctx.message.forward_from.first_name} (@${ctx.message.forward_from.username})`;
             } catch {
                 // Sometimes, "forward_from_chat" or "forward_from" doesn't even exist. Eg: when account is hidden by user
                 link = `No original address specified. Sender was @${ctx.message.forward_sender_name}`;
             }
         }
 
+        // based on type of file sent, we read the json object of it differently
         if (ctx.updateSubTypes[0] == 'photo') {
             // Get the last array index which is always the highest file size.
             // Mostly, it's [2], but sometimes it's [1]
