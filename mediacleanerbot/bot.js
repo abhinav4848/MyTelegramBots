@@ -3,6 +3,12 @@ const Telegraf = require('telegraf');
 
 const bot = new Telegraf(process.env.TOKEN);
 
+// Add the bot to a group and send /groupid@mediacleanerbot
+// copy that value and paste it in the .env to enable logging
+bot.command('groupid', ctx => {
+    ctx.reply(ctx.chat.id)
+})
+
 // Record a log as to who said/sent what
 bot.use((ctx, next) => {
     let details = `${ctx.from.first_name} (@${ctx.from.username})`;
