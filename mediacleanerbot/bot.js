@@ -33,6 +33,15 @@ bot.use((ctx, next) => {
     next();
 })
 
+bot.command(['start', 'help'], ctx => {
+    let welcome = `
+Send me a media file with caption to get it cleaned up`;
+
+    bot.telegram.sendMessage(ctx.from.id, welcome, {
+        parse_mode: "markdown"
+    })
+})
+
 bot.on('message', ctx => {
     // console.log(ctx.message)
 
