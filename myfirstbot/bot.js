@@ -1,128 +1,131 @@
 require('dotenv').config();
-
 const Telegraf = require('telegraf');
+const { DateTime } = require("luxon");
+
 const bot = new Telegraf(process.env.TOKEN);
 
-/**
- * Slash based commands
- */
-// catch the particular method (start, help, settings) method
-// ctx is Telegraf context
+// https://api.telegram.org/bot<bot token>/getUpdates
 
-// bot.start((ctx) => {
-//     ctx.reply(`${ctx.from.first_name} has entered the start command and its type is ${ctx.updateSubTypes[0]}`);
-//     // console.log(ctx);
-//     // console.log(ctx.from);
-//     // console.log(ctx.chat);
-//     // console.log(ctx.message);
-//     // console.log(ctx.updateSubTypes);
-// });
+// Add the bot to a group and send /groupid@mediacleanerbot
+// copy that value and paste it in the .env to enable logging
+bot.command('groupid', ctx => {
+    ctx.reply(ctx.chat.id)
+})
 
-// bot.help((ctx) => {
-//     ctx.reply("You entered the help command");
-// })
-
-// bot.settings((ctx) => {
-//     ctx.reply("You entered the settings command");
-// })
-
-// // custom commands
-// bot.command(["test", "Test"], (ctx) => {
-//     ctx.reply("Hello world");
-// })
-
-/**
- * Normal messages
- * Work only if no other piece of text
- */
-// bot.hears(["cat", "Cat"], (ctx) => {
-//     ctx.reply("Meow!");
-// })
-
-/**
- * MIDDLEWARES
- * https://telegraf.js.org/#/?id=on
- * https://telegraf.js.org/#/?id=update-types
- * 
- * Use the next command to pass function on from one middleware to next otherwise it'll end at the earliest middleware it finds. https://telegraf.js.org/#/?id=middleware
- * Also, pass ctx in the next() to allow the modified context to be passed on further downstream
- */
-// bot.on("text", (ctx, next) => {
-//     ctx.reply("This is a text msg");
-//     next(ctx);
-// })
-
-// bot.on("sticker", (ctx, next) => {
-//     ctx.reply("This is a sticker");
-//     next(ctx);
-// })
-
-/**
- * OTHER METHODS:
- * They work even in middle of a long speech of text
- * Mention: https://telegraf.js.org/#/?id=mention
- * Phone: https://telegraf.js.org/#/?id=phone
- * Hashtag: https://telegraf.js.org/#/?id=hashtag
- * 
- * work only on the very specific text you put as first parameter
- */
-
-// bot.mention("botfather", (ctx) => {
-//     ctx.reply('mention method');
-// })
-
-// bot.phone("+1 730 263-4233", (ctx) => {
-//     ctx.reply('phone method');
-// })
-
-// bot.hashtag("hash", (ctx) => {
-//     ctx.reply('hashtag method');
-// })
-
-/** 
- * Bot Use method
- * As well as modifying the state
- * then passing on the modified ctx to the next middleware downstream
- */
-
+// Record a log as to who said/sent what
 // bot.use((ctx, next) => {
-//     ctx.state.apple = 5;
-//     // console.log(ctx);
-//     ctx.reply("You used the bot");
-//     next(ctx);
+//     let details = `${ctx.from.first_name} (@${ctx.from.username})`;
+
+//     if (ctx.updateSubTypes[0] == "text") {
+//         // General message if text
+//         bot.telegram.sendMessage(process.env.GROUP_ID, `${details} said: ${ctx.message.text}`);
+//     } else {
+//         try {
+//             // Send the msg source as an html formatted link
+//             let link = `https://t.me/c/${ctx.message.forward_from_chat.id.toString().substring(4)}/${ctx.message.forward_from_message_id}`;
+//             let message = `${details} sent <a href="${link}">${ctx.updateSubTypes[0]}</a>`;
+
+//             bot.telegram.sendMessage(process.env.GROUP_ID, message, {
+//                 parse_mode: "html"
+//             })
+//         } catch {
+//             bot.telegram.sendMessage(process.env.GROUP_ID, `${details} sent: ${ctx.updateSubTypes[0]}`);
+//         }
+//     }
+
+//     next();
 // })
 
-// bot.start((ctx) => {
-//     ctx.reply(ctx.state.apple);
-// })
+bot.command(['start', 'help'], ctx => {
+    let welcome = `
+Send me a media file with caption to get it cleaned up`;
 
-/** 
- * Benefit of using telegraf wrapper
- */
-//ctx shortcuts vs Standard telegram methods
-// bot.command('start', ctx => {
-//     //ctx.reply(text, [extra]);
-//     ctx.reply("Hello World"); //ctx method shortcuts does not require chatId
-//     //bot.telegram.sendMessage(chatId, text, [extra])
-//     // bot.telegram.sendMessage(ctx, chat.id, "hellow World"); //telegram method requires chatId
-// })
+    bot.telegram.sendMessage(ctx.from.id, welcome, {
+        parse_mode: "markdown"
+    })
+})
 
-//when using extra params https://telegraf.js.org/#/?id=sendmessage
-bot.command('start', ctx => {
-    //bot.telegram.sendMessage(chatId, text, [extra])
-    // bot.telegram.sendMessage(ctx.chatId, "Hello World",
-    //     {
-    //         parse_mode: 'Markdown',
-    //         disable_notification: true
-    //     });
+bot.on('message', ctx => {
+    // console.log(ctx.message)
 
-    //ctx.reply(text, [extra])
-    ctx.reply("Hello World",
-        {
-            parse_mode: 'Markdown',
-            disable_notification: true
+    // console.log(ctx.updateSubTypes)
+    // Gifs: [ 'animation', 'document', 'forward' ]
+    // Others: [ 'video', 'forward' ]
+    // if (ctx.updateSubTypes[1] == 'forward' || ctx.updateSubTypes[2] == 'forward') {
+
+    // Get the right link to put in media caption
+    let link;
+
+    try {
+        // for normal group links
+        link = `https://t.me/c/${ctx.message.forward_from_chat.id.toString().substring(4)}/${ctx.message.forward_from_message_id}`;
+    } catch {
+        try {
+            // for messages forwarded from a private chat
+            link = `User/Bot with Name: ${ctx.message.forward_from.first_name} (@${ctx.message.forward_from.username})`;
+        } catch {
+            // Sometimes, "forward_from_chat" or "forward_from" doesn't even exist. Eg: when account is hidden by user
+            link = `No original address specified. Sender was @${ctx.message.forward_sender_name}`;
         }
-    );
+    }
+
+    // based on type of file sent, we read the json object of it differently
+    if (ctx.updateSubTypes[0] == 'photo') {
+        // Get the last array index which is always the highest file size.
+        // Mostly, it's [2], but sometimes it's [1]
+        // Actually size doesn't matter. All 
+        let file_id = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        bot.telegram.sendPhoto(ctx.chat.id, file_id, {
+            caption: 'Sent from ' + link
+        });
+
+        // delete the original message the user sent
+        // bot.telegram.deleteMessage(ctx.chat.id, ctx.message.message_id);
+        ctx.deleteMessage();
+
+    } else if (ctx.updateSubTypes[0] == 'video') {
+        // Only enabled file naming for videos
+
+        if (ctx.message.video.file_name) {
+            link += `
+` + ctx.message.video.file_name
+        } else {
+            // https://moment.github.io/luxon/docs/manual/formatting.html
+            const unixTimestamp = ctx.message.date * 1000; //convert to milliseconds
+            link += `
+` + DateTime.fromMillis(unixTimestamp).toFormat("dd'-'MM'-'y'_'HH'-'mm'-'ss'") //Telegram style: 18-03-2021_22-37-33
+        }
+
+        bot.telegram.sendVideo(ctx.chat.id, ctx.message.video.file_id, {
+            caption: 'Sent from ' + link
+        });
+
+        ctx.deleteMessage();
+    } else if (ctx.updateSubTypes[0] == 'animation') {
+        bot.telegram.sendAnimation(ctx.chat.id, ctx.message.animation.file_id, {
+            caption: 'Sent from ' + link
+        });
+
+        ctx.deleteMessage();
+    } else {
+        if (ctx.message.chat.type == 'private') {
+            bot.telegram.sendMessage(ctx.chat.id, "Not a Pic/Vid/Gif",
+                {
+                    reply_to_message_id: ctx.message.message_id
+                });
+            // By returning, we terminate the function and prevent further execution of code inside it
+            return;
+        }
+    }
+    // } else {
+    //     if (ctx.message.chat.type == 'private') {
+    //         // dont send this message in group
+    //         bot.telegram.sendMessage(ctx.chat.id, "Not a forwarded message",
+    //             {
+    //                 reply_to_message_id: ctx.message.message_id
+    //             });
+    //     }
+    // }
 })
 
 bot.launch();
