@@ -36,15 +36,32 @@ bot.command('groupid', ctx => {
 //     next();
 // })
 
+// intro help
 bot.command(['start', 'help'], ctx => {
-    let welcome = `
-Send me a media file with caption to get it cleaned up`;
+    let welcome = `Send me a media file with caption to get it cleaned up`;
 
     bot.telegram.sendMessage(ctx.from.id, welcome, {
         parse_mode: "markdown"
     })
 })
 
+// send mediagroup
+bot.command('group', ctx => {
+    bot.telegram.sendMediaGroup(ctx.chat.id,
+        [
+            {
+                type: 'photo', media: 'AgACAgUAAxkBAAPnYZAUGDpTqK_DNpV8nb6dBIE1T7MAAuGsMRsYWHlUPkiRMH621CoBAAMCAAN5AAMiBA'
+            },
+            {
+                type: 'video', media: 'BAACAgUAAxkBAAPpYZAUPaskSup9r2GOZWB_-lEgrNEAAlgDAAKQCRlUQr8qAruWTPoiBA'
+            }
+        ],
+        {
+            reply_to_message_id: ctx.message.message_id
+        })
+})
+
+// respond to any msg with this: 
 bot.on('message', ctx => {
     // console.log(ctx.message)
 
@@ -76,7 +93,7 @@ bot.on('message', ctx => {
         // Actually size doesn't matter. All 
         let file_id = ctx.message.photo[ctx.message.photo.length - 1].file_id;
         bot.telegram.sendPhoto(ctx.chat.id, file_id, {
-            caption: 'Sent from ' + link
+            caption: 'Sent from ' + link + ', File ID: ' + file_id
         });
 
         // delete the original message the user sent
@@ -87,32 +104,33 @@ bot.on('message', ctx => {
         // Only enabled file naming for videos
 
         if (ctx.message.video.file_name) {
-            link += `
-` + ctx.message.video.file_name
+            link += ctx.message.video.file_name
         } else {
             // https://moment.github.io/luxon/docs/manual/formatting.html
-            const unixTimestamp = ctx.message.date * 1000; //convert to milliseconds
-            link += `
-` + DateTime.fromMillis(unixTimestamp).toFormat("dd'-'MM'-'y'_'HH'-'mm'-'ss'") //Telegram style: 18-03-2021_22-37-33
+            //convert to milliseconds
+            const unixTimestamp = ctx.message.date * 1000;
+            //Telegram style: 18-03-2021_22-37-33
+            link += DateTime.fromMillis(unixTimestamp).toFormat("dd'-'MM'-'y'_'HH'-'mm'-'ss'")
         }
 
         bot.telegram.sendVideo(ctx.chat.id, ctx.message.video.file_id, {
-            caption: 'Sent from ' + link
+            caption: 'Sent from ' + link + ', File ID: ' + ctx.message.video.file_id
         });
 
         ctx.deleteMessage();
     } else if (ctx.updateSubTypes[0] == 'animation') {
         bot.telegram.sendAnimation(ctx.chat.id, ctx.message.animation.file_id, {
-            caption: 'Sent from ' + link
+            caption: 'Sent from ' + link + ', File ID: ' + ctx.message.animation.file_id
         });
 
         ctx.deleteMessage();
     } else {
         if (ctx.message.chat.type == 'private') {
-            bot.telegram.sendMessage(ctx.chat.id, "Not a Pic/Vid/Gif",
+            bot.telegram.sendMessage(ctx.chat.id, "Not a Pic/Vid/Gif.",
                 {
                     reply_to_message_id: ctx.message.message_id
-                });
+                }
+            );
             // By returning, we terminate the function and prevent further execution of code inside it
             return;
         }
