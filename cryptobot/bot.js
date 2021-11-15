@@ -104,7 +104,8 @@ bot.action(priceActionList, async ctx => {
 
 
 bot.action('info', ctx => {
-    ctx.answerCbQuery();
+    // so that the loading icon on the button goes away. As well as a floating message is shown.
+    ctx.answerCbQuery('Please Choose Credits or API used');
     bot.telegram.sendMessage(ctx.chat.id, "Bot Info", {
         reply_markup: {
             keyboard: [
