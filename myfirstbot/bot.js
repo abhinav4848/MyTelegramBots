@@ -90,10 +90,11 @@ bot.on('message', ctx => {
     if (ctx.updateSubTypes[0] == 'photo') {
         // Get the last array index which is always the highest file size.
         // Mostly, it's [2], but sometimes it's [1]
-        // Actually size doesn't matter. All 
+        // Actually size doesn't matter to hardcode the array index at all 
         let file_id = ctx.message.photo[ctx.message.photo.length - 1].file_id;
         bot.telegram.sendPhoto(ctx.chat.id, file_id, {
-            caption: 'Sent from ' + link + ', File ID: ' + file_id
+            caption: 'Sent from ' + link + ',\n\nFile ID: `' + file_id + '`',
+            parse_mode: "markdown"
         });
 
         // delete the original message the user sent
@@ -104,23 +105,26 @@ bot.on('message', ctx => {
         // Only enabled file naming for videos
 
         if (ctx.message.video.file_name) {
-            link += ctx.message.video.file_name
+            nameOfMedia = ctx.message.video.file_name
         } else {
             // https://moment.github.io/luxon/docs/manual/formatting.html
             //convert to milliseconds
             const unixTimestamp = ctx.message.date * 1000;
             //Telegram style: 18-03-2021_22-37-33
-            link += DateTime.fromMillis(unixTimestamp).toFormat("dd'-'MM'-'y'_'HH'-'mm'-'ss'")
+            nameOfMedia = 'video_xxx@' + DateTime.fromMillis(unixTimestamp).toFormat("dd'-'MM'-'y'_'HH'-'mm'-'ss'")
         }
 
-        bot.telegram.sendVideo(ctx.chat.id, ctx.message.video.file_id, {
-            caption: 'Sent from ' + link + ', File ID: ' + ctx.message.video.file_id
-        });
+        bot.telegram.sendVideo(ctx.chat.id, ctx.message.video.file_id,
+            {
+                caption: 'Sent from ' + link + ',\n\nFilename: `' + nameOfMedia + '`,\n\nFile ID: `' + ctx.message.video.file_id + '`',
+                parse_mode: "markdown"
+            }
+        );
 
         ctx.deleteMessage();
     } else if (ctx.updateSubTypes[0] == 'animation') {
         bot.telegram.sendAnimation(ctx.chat.id, ctx.message.animation.file_id, {
-            caption: 'Sent from ' + link + ', File ID: ' + ctx.message.animation.file_id
+            caption: 'Sent from ' + link + ',\n\nFile ID: `' + ctx.message.animation.file_id + '`'
         });
 
         ctx.deleteMessage();
